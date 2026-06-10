@@ -38,7 +38,7 @@ pip install -r requirements-geospatial.txt
 Recommended environment:
 
 ```text
-Python >= 3.9
+Python >= 3.12
 numpy
 pandas
 pytest
@@ -50,6 +50,8 @@ matplotlib
 ### Manhattan / NYC Taxi Dataset
 
 The Manhattan experiments are based on the NYC Taxi & Limousine Commission (TLC) Yellow Taxi Trip Record Data. The TLC trip records contain pickup/drop-off time, pickup/drop-off locations, trip distance, fare-related fields, and passenger counts.
+
+For TLC trip records, pickup/drop-off locations are usually provided as TLC taxi zone IDs. Users should first convert taxi zones to representative coordinates or map taxi zones to grid anchors before running map_match_orders.py.
 
 Official data portal:
 
@@ -78,6 +80,7 @@ Users should place processed files under:
 data/processed/{city}/grid_matrix.npz
 data/processed/{city}/orders.csv
 data/processed/{city}/vehicles.csv
+```
 
 The repository provides scripts for building these files from raw trip records and OSM road networks.
 
@@ -204,6 +207,7 @@ src/rideshare_m3pr/
 ├── synthetic.py    # synthetic data generation
 ├── io.py           # CSV/NPZ loaders
 └── metrics.py      # evaluation metrics
+```
 
 ## Relation to Prior Work
 
