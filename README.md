@@ -16,44 +16,23 @@ The current implementation includes:
   * compatibility constraints for existing onboard orders;
 * cumulative route-cost accounting;
 * synthetic data generation for quick verification;
-* experiment scripts for comparing insertion algorithms and running parameter sweeps.
-
-## Repository Structure
-
-```text
-.
-├── README.md
-├── requirements.txt
-├── pyproject.toml
-├── src/
-│   └── rideshare_m3pr/
-│       ├── models.py
-│       ├── matrix.py
-│       ├── grid_index.py
-│       ├── pruning.py
-│       ├── insertion.py
-│       ├── planner.py
-│       ├── synthetic.py
-│       ├── io.py
-│       └── metrics.py
-├── scripts/
-│   ├── run_demo.py
-│   ├── compare_algorithms.py
-│   ├── run_sweep.py
-│   ├── plot_results.py
-│   ├── build_grid_matrix.py
-│   └── run_gdp_inputs.py
-├── tests/
-└── docs/
-```
+* experiment scripts for comparisons and running parameter sweeps.
+* CSV/NPZ hooks for real preprocessed datasets
+* OSM/GeoPandas preprocessing scripts
 
 ## Installation
 
-The implementation is written in Python.
+Core simulator:
 
 ```bash
 pip install -r requirements.txt
 pip install -e .
+```
+
+Optional GIS preprocessing dependencies:
+
+```bash
+pip install -r requirements-geospatial.txt
 ```
 
 Recommended environment:
@@ -66,57 +45,9 @@ pytest
 matplotlib
 ```
 
-## Quick Start
+## Real-data preprocessing
 
-Run a small synthetic experiment with the linear DP insertion method:
-
-```bash
-python scripts/run_demo.py --algorithm linear --orders 100 --vehicles 20
-```
-
-Compare different insertion methods:
-
-```bash
-python scripts/compare_algorithms.py
-```
-
-Run the test suite:
-
-```bash
-pytest -q
-```
-
-## Implemented Algorithms
-
-### Cubic Insertion
-
-The cubic insertion baseline enumerates all possible pickup and delivery insertion positions and checks route feasibility from scratch.
-
-### Quadratic DP Insertion
-
-The quadratic DP-based method uses auxiliary route states to reduce feasibility checking and insertion-cost calculation to constant time for each candidate pair.
-
-### Profit-Bounded Linear DP Insertion
-
-The linear DP-based method scans delivery positions once and maintains the best feasible pickup-side state dynamically. It further applies a price-aware profit bound to avoid insertions that are dominated by rejecting the order.
-
-## M3PR Objective
-
-The implementation follows the transformed price-aware M3PR objective:
-
-```text
-P_sub = revenue loss of unserved orders + vehicle routing cost
-```
-
-For each incoming order, the planner evaluates whether accepting the order is profitable under the current route context. A feasible insertion is accepted only when the resulting additional vehicle cost does not exceed the revenue loss caused by rejecting the order.
-
-Passenger-side service quality is handled by hard constraints instead of being mixed directly into the economic objective.
-
-## Data
-
-The repository currently provides synthetic data generation for quick testing and debugging.
-
-For full-scale experiments on real-world datasets, the expected processed input format is:
+The full paper-style experiment requires three processed inputs:
 
 ```text
 data/processed/{city}/grid_matrix.npz
@@ -124,42 +55,131 @@ data/processed/{city}/orders.csv
 data/processed/{city}/vehicles.csv
 ```
 
-Preprocessing pipeline includes:
+The repository provides scripts for building these files from raw trip records and OSM road networks.
 
-1. extracting the road network;
-2. partitioning the city into grids;
-3. selecting anchor nodes for grids;
-4. mapping order origins and destinations to anchor nodes;
-5. precomputing shortest-path distance and travel-time matrices;
-6. generating initial vehicle states.
+### 1. Build OSM road network and 650m grid anchors
 
-The raw Manhattan and Chengdu datasets are not included in this repository because of data availability and licensing restrictions.
-
-## Example Commands
-
-Run a synthetic demo:
+Manhattan:
 
 ```bash
-python scripts/run_demo.py --algorithm linear --orders 100 --vehicles 20
+python scripts/preprocess_osm.py \
+  --city manhattan \
+  --place "Manhattan, New York City, New York, USA" \
+  --grid-size-m 650
 ```
 
-Compare insertion methods:
+Chengdu:
 
 ```bash
-python scripts/compare_algorithms.py
+python scripts/preprocess_osm.py \
+  --city chengdu \
+  --place "Chengdu, Sichuan, China" \
+  --grid-size-m 650
 ```
 
-Run a parameter sweep:
+This creates:
+
+```text
+data/processed/{city}/road.graphml
+data/processed/{city}/anchors.csv
+data/processed/{city}/grids.geojson
+data/processed/{city}/metadata.json
+```
+
+### 2. Map raw orders to grid-anchor ids
+
+Example for a TLC-style Manhattan file:
 
 ```bash
-python scripts/run_sweep.py
+python scripts/map_match_orders.py \
+  --city-dir data/processed/manhattan \
+  --orders-raw data/raw/manhattan_orders.csv \
+  --pickup-lon-col pickup_longitude \
+  --pickup-lat-col pickup_latitude \
+  --dropoff-lon-col dropoff_longitude \
+  --dropoff-lat-col dropoff_latitude \
+  --time-col pickup_datetime \
+  --time-mode timestamp
 ```
 
-Plot results:
+The output is `data/processed/manhattan/orders.csv` with compact grid ids as origins and destinations.
+
+### 3. Generate initial vehicles
 
 ```bash
-python scripts/plot_results.py
+python scripts/generate_vehicles.py \
+  --city-dir data/processed/manhattan \
+  --orders data/processed/manhattan/orders.csv \
+  --vehicles 1500 \
+  --capacity 4 \
+  --sample-from order_origins
 ```
+
+### 4. Build the grid-anchor shortest-path matrix
+
+```bash
+python scripts/build_shortest_path_matrix.py \
+  --city-dir data/processed/manhattan \
+  --dtype float32
+```
+
+This creates `grid_matrix.npz` with:
+
+```text
+distance: shortest-path distance between grid anchors, in meters
+time:     shortest-path travel time between grid anchors, in seconds
+coords:   projected grid centroid coordinates
+```
+
+### 5. Run on processed data
+
+```bash
+python scripts/run_real_data.py \
+  --matrix data/processed/manhattan/grid_matrix.npz \
+  --orders data/processed/manhattan/orders.csv \
+  --vehicles data/processed/manhattan/vehicles.csv \
+  --algorithm linear \
+  --alpha 1.7 \
+  --beta 6.5
+```
+
+For more details, see [`docs/REAL_DATA_PREPROCESSING.md`](docs/REAL_DATA_PREPROCESSING.md).
+
+## Input formats
+
+`orders.csv`:
+
+```text
+order_id,origin,destination,release_time,demand,max_pickup_delay,detour_ratio
+```
+
+`vehicles.csv`:
+
+```text
+vehicle_id,current_node,capacity,current_time
+```
+
+`grid_matrix.npz`:
+
+```text
+distance,time[,coords]
+```
+
+All node ids in `orders.csv` and `vehicles.csv` refer to compact grid ids, not raw OSM node ids.
+
+## Code layout
+
+```text
+src/rideshare_m3pr/
+├── models.py       # order, vehicle, and route-stop data classes
+├── matrix.py       # spatiotemporal grid matrix
+├── grid_index.py   # grid-indexed dual-side vehicle pruning
+├── pruning.py      # direct and indexed pruning interfaces
+├── insertion.py    # cubic, quadratic-DP, and linear-DP insertion
+├── planner.py      # online M3PR planner
+├── synthetic.py    # synthetic data generation
+├── io.py           # CSV/NPZ loaders
+└── metrics.py      # evaluation metrics
 
 ## Relation to Prior Work
 
