@@ -1,0 +1,10 @@
+[project]
+name = "m3pr-rideshare-reproduction"
+version = "0.3.0"
+description = "Executable reproduction scaffold for an M3PR ride-sharing route-planning framework."
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "pandas>=2.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
