@@ -45,15 +45,39 @@ pytest
 matplotlib
 ```
 
-## Real-data preprocessing
+## Dataset
 
-The full paper-style experiment requires three processed inputs:
+### Manhattan / NYC Taxi Dataset
+
+The Manhattan experiments are based on the NYC Taxi & Limousine Commission (TLC) Yellow Taxi Trip Record Data. The TLC trip records contain pickup/drop-off time, pickup/drop-off locations, trip distance, fare-related fields, and passenger counts.
+
+Official data portal:
+
+- NYC TLC Trip Record Data: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+- 2018 Yellow Taxi Trip Data: https://data.cityofnewyork.us/Transportation/2018-Yellow-Taxi-Trip-Data/t29m-gskq
+
+
+### Chengdu / DiDi GAIA Dataset
+
+The Chengdu experiments are based on the DiDi Chuxing GAIA Initiative dataset. The public access page indicates that the released data is primarily based on the Chengdu dataset from the DiDi GAIA program.
+
+Official access page:
+
+- DiDi GAIA Open Dataset: https://gaia.didichuxing.com/en
+- DiDi outreach data page: https://outreach.didichuxing.com/SimulationS/data.html
+
+Access to the DiDi GAIA dataset may require application or permission from the data provider.
+
+### Road Network Data
+
+The road networks used for preprocessing can be obtained from OpenStreetMap. Here provide preprocessing scripts based on OSMnx to download or load road networks, construct 650 m grids, select anchor nodes, perform map matching, and build shortest-path matrices.
+
+Users should place processed files under:
 
 ```text
 data/processed/{city}/grid_matrix.npz
 data/processed/{city}/orders.csv
 data/processed/{city}/vehicles.csv
-```
 
 The repository provides scripts for building these files from raw trip records and OSM road networks.
 
