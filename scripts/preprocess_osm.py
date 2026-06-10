@@ -35,12 +35,12 @@ def _require_geospatial() -> tuple[Any, Any]:
     return gpd, ox
 
 
-def _call(obj: Any, dotted: str, *args: Any, **kwargs: Any) -> Any:
-    """Call an OSMnx function across old/new namespace layouts."""
-    cur = obj
-    for part in dotted.split("."):
-        cur = getattr(cur, part)
-    return cur(*args, **kwargs)
+#def _call(obj: Any, dotted: str, *args: Any, **kwargs: Any) -> Any:
+ #   """Call an OSMnx function across old/new namespace layouts."""
+  #  cur = obj
+ #   for part in dotted.split("."):
+ #       cur = getattr(cur, part)
+ #   return cur(*args, **kwargs)
 
 
 def _get_ox_fn(ox: Any, name: str) -> Any:
