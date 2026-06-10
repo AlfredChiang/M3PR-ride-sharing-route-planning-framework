@@ -1,0 +1,8 @@
+# Optional dependencies for OSM/real-data preprocessing.
+# Install these only when you want to build Manhattan/Chengdu inputs from raw GIS data.
+osmnx>=2.0
+geopandas>=0.14
+shapely>=2.0
+pyproj>=3.6
+networkx>=3.2
+matplotlib>=3.8
